@@ -10,6 +10,7 @@ clap = { version = "4", features = ["derive"] }
 config = "0.14"
 derive_more = "0.99.17"
 log = "0.4"
+openssl = { version = "0.10.64", features = ["vendored"] }
 rocket = { version = "0.5", features = ["json", "secrets"] }
 rocket_okapi = { version="0.8.0" , features = ["preserve_order", "rapidoc"] }
 rust-argon2 = "2.1"
