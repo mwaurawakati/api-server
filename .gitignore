@@ -1,0 +1,12 @@
+Cargo.lock
+target/
+
+.idea/
+.vscode/
+.vs_code/
+.DS_Store
+Thumbs.db
+
+*.db
+*.sqlite
+*.sqlite3
