@@ -1,0 +1,7 @@
+---
+server:
+  host: 127.0.0.1
+  port: 8001
+  allow_cors: yes
+app:
+  db_path: data/test.db

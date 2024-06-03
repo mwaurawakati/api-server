@@ -1,0 +1,28 @@
+[package]
+name = "api-server"
+description = "A simple API Server using Rocket, Sqlx, SQLite with API Key Authentication."
+version = "0.1.5"
+authors = ["Sriram <marirs@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+config = "0.14"
+derive_more = "0.99.17"
+log = "0.4"
+rocket = { version = "0.5", features = ["json", "secrets"] }
+rocket_okapi = { version="0.8.0" , features = ["preserve_order", "rapidoc"] }
+rust-argon2 = "2.1"
+simple_logger = "5"
+schemars = { version="0.8.21" , features = ["impl_json_schema", "preserve_order"]}
+serde = { version = "1.0.136", features = ["derive"] }
+sqlx = { version = "0.7", features = [ "runtime-async-std-native-tls", "sqlite" ] }
+thiserror = "1"
+uuid = { version = "1.8.0", features = ["v5"] }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+jemallocator = "0.5.4"
+
+[[bin]]
+name = "api-server"
+path = "src/main.rs"
