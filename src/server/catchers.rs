@@ -1,60 +1,71 @@
-use rocket::{http::Status, request::Request, serde::json::Value};
+use lambda_http::{Body, Request, Response};
+use std::collections::HashMap;
 
-#[catch(400)]
-pub async fn bad_request(req: &Request<'_>) -> (Status, Value) {
-    json_response!(
-        400,
-        "request not understood",
-        "request_uri" => req.uri().to_string()
-    )
+async fn json_response(
+    status_code: u16,
+    message: &str,
+    additional_fields: Option<HashMap<&str, String>>,
+) -> Response<Body> {
+    let mut response = HashMap::new();
+    response.insert("status", status_code.to_string());
+    response.insert("message", message.to_string());
+
+    if let Some(fields) = additional_fields {
+        for (key, value) in fields {
+            response.insert(key, value);
+        }
+    }
+
+    let body = Body::Text(serde_json::to_string(&response).unwrap());
+
+    Response::builder()
+        .status(status_code)
+        .body(body)
+        .expect("failed to render response")
 }
 
-#[catch(401)]
-pub async fn not_authorized(req: &Request<'_>) -> (Status, Value) {
-    json_response!(
-        401,
-        "not authorized",
-        "request_uri" => req.uri().to_string()
-    )
+pub async fn bad_request(req: &Request) -> Response<Body> {
+    let uri = req.uri().to_string();
+    let mut fields = HashMap::new();
+    fields.insert("request_uri", uri);
+    json_response(400, "request not understood", Some(fields)).await
 }
 
-#[catch(403)]
-pub async fn forbidden(req: &Request<'_>) -> (Status, Value) {
-    json_response!(
-        403,
-        "forbidden",
-        "request_uri" => req.uri().to_string()
-    )
+pub async fn not_authorized(req: &Request) -> Response<Body> {
+    let uri = req.uri().to_string();
+    let mut fields = HashMap::new();
+    fields.insert("request_uri", uri);
+    json_response(401, "not authorized", Some(fields)).await
 }
 
-#[catch(404)]
-pub async fn not_found(req: &Request<'_>) -> (Status, Value) {
-    json_response!(
-        404,
-        "not found",
-        "request_uri" => req.uri().to_string()
-    )
+pub async fn forbidden(req: &Request) -> Response<Body> {
+    let uri = req.uri().to_string();
+    let mut fields = HashMap::new();
+    fields.insert("request_uri", uri);
+    json_response(403, "forbidden", Some(fields)).await
 }
 
-#[catch(422)]
-pub async fn unprocessed_entity(_req: &Request<'_>) -> (Status, Value) {
-    json_response!(422, "Check your input data".to_string())
+pub async fn not_found(req: &Request) -> Response<Body> {
+    let uri = req.uri().to_string();
+    let mut fields = HashMap::new();
+    fields.insert("request_uri", uri);
+    json_response(404, "not found", Some(fields)).await
 }
 
-#[catch(429)]
-pub async fn too_many_requests(req: &Request<'_>) -> (Status, Value) {
-    json_response!(
-        429,
-        "too many requests",
-        "request_uri" => req.uri().to_string()
-    )
+pub async fn unprocessed_entity(_req: &Request) -> Response<Body> {
+    json_response(422, "Check your input data", None).await
 }
 
-#[catch(500)]
-pub async fn internal_server_error(req: &Request<'_>) -> (Status, Value) {
-    json_response!(
-        500,
-        "internal server error",
-        "request_uri" => req.uri().to_string()
-    )
+pub async fn too_many_requests(req: &Request) -> Response<Body> {
+    let uri = req.uri().to_string();
+    let mut fields = HashMap::new();
+    fields.insert("request_uri", uri);
+    json_response(429, "too many requests", Some(fields)).await
+}
+
+pub async fn internal_server_error(req: &Request) -> Response<Body> {
+    let uri = req.uri().to_string();
+    let mut fields = HashMap::new();
+    fields.insert("request_uri", uri);
+    json_response(500, "internal server error", Some(fields)).await
 }

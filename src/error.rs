@@ -82,21 +82,6 @@ impl Error {
     }
 }
 
-impl From<rocket::serde::json::Error<'_>> for Error {
-    /// Converts a `rocket::serde::json::Error` into an `Error` enum.
-    ///
-    /// # Arguments
-    ///
-    /// * `e` - The json error that needs to be converted.
-    ///
-    /// # Returns
-    ///
-    /// The converted `Error` enum.
-    fn from(e: rocket::serde::json::Error<'_>) -> Self {
-        Error::FormatError(format!("{:?}", e))
-    }
-}
-
 impl Serialize for Error {
     /// Serializes the Error struct.
     ///

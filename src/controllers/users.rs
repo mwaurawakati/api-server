@@ -1,15 +1,10 @@
-use super::generic_response;
 use crate::{
     db::SqliteBackend,
     models::{NewUser, UpdateUser},
-    secure::guards::ApiKeyGuard,
 };
-use rocket::{
-    http::Status,
-    serde::json::{Json, Value},
-    State,
-};
+use lambda_http::{Body, Error as LambdaError, Request, Response};
 
+use serde_json::json;
 /// # Create a new user
 ///
 /// This endpoint is used to create a new user.
@@ -27,16 +22,47 @@ use rocket::{
 /// A tuple consisting of:
 /// - `Status`: The HTTP status code.
 /// - `Value`: The response body as a JSON value.
-#[openapi(tag = "Users")]
-#[post("/users", format = "json", data = "<user>")]
+
 pub async fn create_user_endpoint(
-    user: Json<NewUser>,
-    backend: &State<SqliteBackend>,
-    salt: &State<String>,
-    _api_guard: ApiKeyGuard,
-) -> (Status, Value) {
-    generic_response(backend.create_user(user.into_inner(), salt).await)
+    backend: SqliteBackend,
+    request: Request,
+    salt: String,
+) -> Result<Response<Body>, LambdaError> {
+    let new_user: NewUser = serde_json::from_slice(request.body().as_ref())?;
+    println!("{:#?}", new_user);
+    match backend.create_user(new_user, &salt).await {
+        Ok(o) => {
+            println!("created");
+            let m = json!(
+            {
+                "message":"user created",
+                "user": o,
+                "status":200
+            });
+            Ok(Response::builder()
+                .status(201)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+        Err(e) => {
+            let m = json!(
+            {
+                "message":"user creation failed",
+                "error": e,
+                "status":500
+            });
+            Ok(Response::builder()
+                .status(500)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+    }
 }
+
+/*Ok(Response::builder()
+.status(201)
+.body(Body::Text("User created".into()))
+.unwrap())*/
 
 /// # Update an existing user
 ///
@@ -52,18 +78,41 @@ pub async fn create_user_endpoint(
 ///
 /// # Returns
 /// A tuple containing the HTTP status code and the JSON value of the response body.
-#[openapi(tag = "Users")]
-#[put("/users/<user_id>", format = "json", data = "<user>")]
 pub async fn update_user_endpoint(
-    user_id: &str,
-    user: Json<UpdateUser>,
-    backend: &State<SqliteBackend>,
-    salt: &State<String>,
-    _api_guard: ApiKeyGuard,
-) -> (Status, Value) {
-    generic_response(backend.update_user(user.into_inner(), user_id, salt).await)
+    backend: SqliteBackend,
+    request: Request,
+    salt: String,
+) -> Result<Response<Body>, LambdaError> {
+    let path_segments: Vec<&str> = request.uri().path().split('/').collect();
+    let user_id = path_segments[2];
+    let update_user: UpdateUser = serde_json::from_slice(request.body().as_ref())?;
+    match backend.update_user(update_user, user_id, &salt).await {
+        Ok(o) => {
+            let m = json!(
+            {
+                "message":"user updated",
+                "user": o,
+                "status":200
+            });
+            Ok(Response::builder()
+                .status(201)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+        Err(e) => {
+            let m = json!(
+            {
+                "message":"user update failed",
+                "error": e,
+                "status":500
+            });
+            Ok(Response::builder()
+                .status(500)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+    }
 }
-
 /// # Delete an existing user with the specified ID
 ///
 /// This endpoint deletes a user by a given user id.
@@ -81,16 +130,39 @@ pub async fn update_user_endpoint(
 /// Returns `Result` indicating success or failure of the deletion operation. If the user is
 /// deleted successfully, the function returns `Ok(Status::NoContent)`. If there is an error
 /// during deletion, it returns `Err` with a String containing the error message.
-#[openapi(tag = "Users")]
-#[delete("/users/<user_id>")]
 pub async fn delete_user_endpoint(
-    user_id: String,
-    backend: &State<SqliteBackend>,
-    _api_guard: ApiKeyGuard,
-) -> (Status, Value) {
-    generic_response(backend.delete_user(&user_id).await)
+    backend: SqliteBackend,
+    request: Request,
+) -> Result<Response<Body>, LambdaError> {
+    let path_segments: Vec<&str> = request.uri().path().split('/').collect();
+    let user_id = path_segments[2];
+    match backend.delete_user(user_id).await {
+        Ok(o) => {
+            let m = json!(
+            {
+                "message":"user deleted",
+                "user": o,
+                "status":200
+            });
+            Ok(Response::builder()
+                .status(201)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+        Err(e) => {
+            let m = json!(
+            {
+                "message":"user delete failed",
+                "error": e,
+                "status":500
+            });
+            Ok(Response::builder()
+                .status(500)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+    }
 }
-
 /// # List all Users
 ///
 /// This endpoint lists all the users.
@@ -106,15 +178,37 @@ pub async fn delete_user_endpoint(
 /// ## Returns
 ///
 /// Returns a tuple containing the HTTP status and a `Value` representing the response payload.
-#[openapi(tag = "Users")]
-#[get("/users")]
 pub async fn list_all_users_endpoint(
-    backend: &State<SqliteBackend>,
-    _api_guard: ApiKeyGuard,
-) -> (Status, Value) {
-    generic_response(backend.get_all_users().await)
+    backend: SqliteBackend,
+    _request: Request,
+) -> Result<Response<Body>, LambdaError> {
+    match backend.get_all_users().await {
+        Ok(o) => {
+            let m = json!(
+            {
+                "message":"user get list successful",
+                "user": o,
+                "status":200
+            });
+            Ok(Response::builder()
+                .status(201)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+        Err(e) => {
+            let m = json!(
+            {
+                "message":"user get list failed",
+                "error": e,
+                "status":500
+            });
+            Ok(Response::builder()
+                .status(500)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+    }
 }
-
 /// # Get user information by ID
 ///
 /// This endpoint gets user information by a given user id.
@@ -131,16 +225,39 @@ pub async fn list_all_users_endpoint(
 /// Returns a tuple with a `Status` and a `Value`.
 /// The `Status` represents the HTTP status code of the response.
 /// The `Value` contains the user information in JSON format.
-#[openapi(tag = "Users")]
-#[get("/users/<user_id>")]
 pub async fn get_user_by_id_endpoint(
-    user_id: String,
-    backend: &State<SqliteBackend>,
-    _api_guard: ApiKeyGuard,
-) -> (Status, Value) {
-    generic_response(backend.get_user_with_id(&user_id).await)
+    backend: SqliteBackend,
+    request: Request,
+) -> Result<Response<Body>, LambdaError> {
+    let path_segments: Vec<&str> = request.uri().path().split('/').collect();
+    let user_id = path_segments[2];
+    match backend.get_user_with_id(user_id).await {
+        Ok(o) => {
+            let m = json!(
+            {
+                "message":"get user by id successful",
+                "user": o,
+                "status":200
+            });
+            Ok(Response::builder()
+                .status(201)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+        Err(e) => {
+            let m = json!(
+            {
+                "message":"get user by id failed",
+                "error": e,
+                "status":500
+            });
+            Ok(Response::builder()
+                .status(500)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+    }
 }
-
 /// # Get a user by their API key
 ///
 /// This endpoint gets user information by a given api key.
@@ -154,11 +271,40 @@ pub async fn get_user_by_id_endpoint(
 ///
 /// # Returns
 /// A tuple containing the HTTP status and the user information in JSON format.
-#[openapi(tag = "Users")]
-#[get("/users/apikey")]
 pub async fn get_user_by_api_key_endpoint(
-    api_key: ApiKeyGuard,
-    backend: &State<SqliteBackend>,
-) -> (Status, Value) {
-    generic_response(backend.get_user_with_apikey(&api_key.0.api_key).await)
+    backend: SqliteBackend,
+    request: Request,
+) -> Result<Response<Body>, LambdaError> {
+    let api_key = request
+        .headers()
+        .get("x-api-key")
+        .and_then(|header| header.to_str().ok())
+        .map(|header| header.trim())
+        .ok_or(crate::error::Error::UnauthenticatedUser)?;
+    match backend.get_user_with_apikey(api_key).await {
+        Ok(o) => {
+            let m = json!(
+            {
+                "message":"get user by api successful",
+                "user": o,
+                "status":200
+            });
+            Ok(Response::builder()
+                .status(201)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+        Err(e) => {
+            let m = json!(
+            {
+                "message":"get user by api failed",
+                "error": e,
+                "status":500
+            });
+            Ok(Response::builder()
+                .status(500)
+                .body(Body::Text(m.to_string().into()))
+                .unwrap())
+        }
+    }
 }

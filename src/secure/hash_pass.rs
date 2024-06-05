@@ -15,9 +15,9 @@ pub fn hash_password(password: &str, salt: &str) -> Result<String> {
     let config = Config {
         variant: Variant::Argon2id,
         version: Version::Version13,
-        mem_cost: 65536,
-        time_cost: 10,
-        lanes: 4,
+        mem_cost: 4096, // Reduced memory cost
+        time_cost: 1,   // Reduced time cost
+        lanes: 1,       // Reduced number of lanes
         secret: &[],
         ad: &[],
         hash_length: 32,

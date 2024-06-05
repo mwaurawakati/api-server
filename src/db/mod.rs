@@ -125,7 +125,7 @@ impl SqliteBackend {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .subsec_nanos();
-
+        println!("api key {apikey}");
         let password = hash_password(&user.password, salt)?;
         if let Ok(verified) = verify_password(&user.password, &password.to_owned()) {
             if !verified {
@@ -134,7 +134,7 @@ impl SqliteBackend {
         } else {
             return Err(Error::PasswordHashError);
         }
-
+        println!("password {password}");
         let new_user = User {
             user_id: user.user_id,
             password,
@@ -153,7 +153,7 @@ impl SqliteBackend {
         .bind(new_user.email_id.to_owned())
         .execute(&self.pool.to_owned())
         .await?;
-
+        println!("created");
         Ok(new_user)
     }
 
