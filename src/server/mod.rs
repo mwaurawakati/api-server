@@ -36,7 +36,7 @@ async fn handler(event: Request) -> Result<Response<Body>, LambdaError> {
     }
     let db_backend = SqliteBackend::new_connection(&db_url).await?;
     db_backend.check_and_create_table().await?;
-
+    let storage_path = "/path/to/storage";
     let salt = String::from("12345678");
     match get_user_from_request(&event, &db_backend).await {
         Ok(_) => {
@@ -60,6 +60,13 @@ async fn handler(event: Request) -> Result<Response<Body>, LambdaError> {
                 ("GET", "/users/api_key") => {
                     controllers::users::get_user_by_api_key_endpoint(db_backend, event).await
                 }
+                /*("POST", "/upload") => {
+                    controllers::files::upload_file_endpoint(storage_path, event).await
+                }
+                ("GET", path) if path.starts_with("/download/") => {
+                    let file_path = path.strip_prefix("/download/").unwrap_or("");
+                    controllers::files::download_file_endpoint(storage_path, file_path).await
+                }*/
                 _ => Ok(not_found(&event).await),
             }
         }
