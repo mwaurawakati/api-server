@@ -14,11 +14,11 @@ use simple_logger::SimpleLogger;
 use std::path::Path;
 
 /// Server & App Configurations
-pub mod config;
+//pub mod config;
 use self::config::Settings;
-
 /// Catchers like 500, 501, 404, etc
 mod catchers;
+pub(crate) mod config;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -56,7 +56,7 @@ fn parse_settings_from_cli() -> Result<Settings> {
 pub async fn init_server() -> Result<Rocket<Build>> {
     let settings = parse_settings_from_cli()?;
     SimpleLogger::new()
-        .with_level(to_level_filter(&settings.server.log_level))
+        .with_level(to_level_filter(&settings.clone().server.log_level))
         .with_colors(true)
         .init()
         .unwrap();
@@ -66,7 +66,7 @@ pub async fn init_server() -> Result<Rocket<Build>> {
         settings.server.log_level
     );
     info!("Server CORS enabled: {:?}", settings.server.allow_cors);
-    let db_url = if let Some(a) = settings.app {
+    let db_url = if let Some(a) = settings.clone().app {
         a.db_path
     } else {
         return Err(Error::AppConfigurationError);
@@ -75,7 +75,7 @@ pub async fn init_server() -> Result<Rocket<Build>> {
         return Err(Error::DatabaseNotConfigured);
     }
 
-    let server_settings = settings.server;
+    let server_settings = settings.clone().server;
 
     // Uses the secret key to encrypt the Password. So if the
     // secret key is lost/changed, the password cannot be decrypted.
@@ -123,6 +123,8 @@ pub async fn init_server() -> Result<Rocket<Build>> {
                 controllers::users::list_all_users_endpoint,
                 controllers::users::get_user_by_id_endpoint,
                 controllers::users::get_user_by_api_key_endpoint,
+                controllers::files::upload_file,
+                controllers::files::download_file
             ],
         )
         .mount(
@@ -176,8 +178,8 @@ pub async fn init_server() -> Result<Rocket<Build>> {
         // Add Db pool to the state
         .manage(db_backend)
         // Sending the salt key to the state
-        .manage(salt);
-
+        .manage(salt)
+        .manage(settings);
     // Attach Cors if disabled
     let app = if server_settings.allow_cors {
         app.attach(Cors)
